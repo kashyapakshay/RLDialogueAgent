@@ -1,54 +1,71 @@
 import random
+import numpy as np
 
 class QLearner:
-    def __init__(self, actions, alpha=0.01, gamma=0.01, epsilon=0.05):
+    def __init__(self, states=[], actions=[], rewardMatrix=[], alpha=0.1, gamma=0.3, epsilon=0.15):
         # Learning Rate
-        self.alpha = alpha
+        self._alpha = alpha
         # Discount Factor
-        self.gamma = gamma
+        self._gamma = gamma
         # Exploration probability
-        self.epsilon = epsilon
+        self._epsilon = epsilon
 
-        self.actions = actions
+        self._states = states
+        self._actions = actions
 
-        self.q = {}
+        # Reward Matrix:
+        #
+        #  S\A   | Action1  Action2  Action3
+        # ---------------------------------
+        # State1 | R11      R12      R13
+        # State2 | R21      R22      R23
+        # State3 | R31      R32      R33
+
+        if not rewardMatrix:
+            self._rewardMatrix = np.array([[0 for action in self._actions] for state in self._states])
+        else:
+            self._rewardMatrix = np.array(rewardMatrix)
+
+        # Q-table initialized with same dimensions as Reward Matrix and all 0's.
+        self._qMatrix = np.zero_like(self._rewardMatrix)
+
+    def getReward(self, state, action):
+        return self._rewardMatrix[self._states.index(state), self._actions.index(action)]
+
+    def setReward(self, state, action, reward):
+        self._rewardMatrix[self._states.index(state), self._actions.index(action)] = reward
 
     def getQ(self, state, action):
-        return self.q.get((tuple(state), action), 0)
+        return self._qMatrix[self._states.index(state), self._actions.index(action)]
 
-    def getTotalReward(self):
-        return sum([self.q.get(key) for key in self.q.keys()])
+    def setQ(self, state, action, q):
+        self._qMatrix[self._states.index(state), self._actions.index(action)] = q
 
     def updateQ(self, state, action, reward, state2):
         currentQ = self.getQ(state, action)
+        futureMaxQ = max([self.getQ(state2, futureAction) for futureAction in self._actions])
 
-        if currentQ is 0:
-            self.q[(tuple(state), action)] = reward
-        else:
-            futureQ = max([self.getQ(state2, futureAction) for futureAction in self.actions])
-            newQ = currentQ + self.alpha * (reward + futureQ - self.gamma * currentQ)
+        # Sutton, R.S. and Barto, A.G. Reinforcement Learning: An Introduction, 1998.
+        newQ = currentQ + self._alpha * (reward + self._gamma * futureMaxQ - currentQ)
 
-            self.q[(tuple(state), action)] = newQ
-
-    def updateActions(self, newActions):
-        self.actions = newActions
+        self.setQ(state, action, newQ)
 
     def chooseAction(self, state):
         # Explore
-        if random.random() < self.epsilon:
-            return random.choice(self.actions)
+        if random.uniform(0, 1) < self._epsilon:
+            return random.choice(self._actions)
         # Exploit
         else:
-            actionRewards = [self.getQ(state, action) for action in self.actions]
+            actionRewards = [self.getQ(state, action) for action in self._actions]
             maxActionReward = max(actionRewards)
 
             # We could have more than one action with max reward; choose one randomly.
             count = actionRewards.count(actionRewards)
 
             if count > 1:
-                best = [i for i in range(len(self.actions)) if actionRewards[i] == maxQ]
+                best = [i for i in range(len(self._actions)) if actionRewards[i] == maxQ]
                 i = random.choice(best)
             else:
                 i = actionRewards.index(maxActionReward)
 
-            return self.actions[i]
+            return self._actions[i]
