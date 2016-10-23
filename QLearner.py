@@ -41,9 +41,9 @@ class QLearner:
     def setQ(self, state, action, q):
         self._qMatrix[self._states.index(state), self._actions.index(action)] = q
 
-    def updateQ(self, state, action, reward, state2):
+    def updateQ(self, state, action, reward, nextState):
         currentQ = self.getQ(state, action)
-        futureMaxQ = max([self.getQ(state2, futureAction) for futureAction in self._actions])
+        futureMaxQ = max([self.getQ(nextState, futureAction) for futureAction in self._actions])
 
         # Sutton, R.S. and Barto, A.G. Reinforcement Learning: An Introduction, 1998.
         newQ = currentQ + self._alpha * (reward + self._gamma * futureMaxQ - currentQ)
