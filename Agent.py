@@ -44,13 +44,36 @@ class BaseAgent:
 
 class InstructionGenerationAgent(BaseAgent):
     def __init__(self):
-        self._stateTemplate = ()
-        self.statesMap = {}
-        self.actions = []
-        self.rewardMatrix = []
-        self.initialState = ()
+        self._stateTemplate = ('task-trajectory', 'target-in-view', 'is-near-landmark', 'is-confused', 'prev-instruction-length')
 
-        BaseAgent.__init__(states=self.generateStateSpace(self.statesMap, self.stateTemplate), \
+        self.statesMap = {
+            'task-trajectory': ['closer', 'further', 'no-change', 'finished'],
+            'target-in-view': ['yes', 'no'],
+            'is-near-landmark': ['yes', 'no'],
+            'is-confused': ['yes', 'no'],
+            'prev-instruction-length': ['short', 'medium', 'long', 'none']
+        }
+
+        self.actions = ['plain', 'turn', 'plain-landmark', 'turn-landmark']
+
+        self.initialState = ('no-change', 'no', 'no', 'no', 'none')
+        self.states = self.generateStateSpace(self.statesMap, self.stateTemplate)
+
+        # REWARD MATRIX
+        # -10 for every move
+        # +100 for finishing
+        # +1 for getting closer
+        self.rewardMatrix = np.array([[-10 for state in self._states] for state in self._states])
+
+        for state in self.states:
+            for finishState in filter(lambda state: state[0] is 'finished', self.states):
+                self.rewardMatrix[state, finishState] = 100
+
+        for state in self.states:
+            for finishState in filter(lambda state: state[0] is 'closer', self.states):
+                self.rewardMatrix[state, finishState] = 1
+
+        BaseAgent.__init__(states=self.states, \
             actions=self.actions, rewardMatrix=self.rewardMatrix, initialState=self.initialState)
 
         def generateStateSpace(self, statesMap, stateTemplate):
@@ -72,11 +95,19 @@ class InterventionAgent(BaseAgent):
         self.initialState = ('no-action', 'no-change', 'no-action')
         self.states = self.generateStateSpace(self.statesMap, self.stateTemplate)
 
-        self.rewardMatrix = np.array([[0 for state in self._states] for state in self._states])
+        # REWARD MATRIX
+        # -1 for every move
+        # +1 for getting closer
+        # +100 for finishing
+        self.rewardMatrix = np.array([[-1 for state in self._states] for state in self._states])
 
         for state in self.states:
-            for finishState in itertools.product(statesMap['current-follower-action'], ['finished'], statesMap['last-action']):
+            for finishState in filter(lambda state: state[1] is 'finished', self.states):
                 self.rewardMatrix[state, finishState] = 100
+
+        for state in self.states:
+            for finishState in filter(lambda state: state[1] is 'closer', self.states):
+                self.rewardMatrix[state, finishState] = 1
 
         BaseAgent.__init__(states=self.states, \
             actions=self.actions, rewardMatrix=self.rewardMatrix, initialState=self.initialState)
