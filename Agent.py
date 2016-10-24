@@ -7,20 +7,7 @@ class BaseAgent:
     def __init__(self, states=[], actions=[], rewardMatrix=[], initialState=None):
         self._currentState = initialState
 
-        # statesMap ={
-        #     state1: ['value1', 'value2']
-        #     state2: ['value1', 'value2', 'value3']
-        #     ...
-        # }
-
-        self._states = states
-        self._actions = actions
-
-        self.qLearner = QLearner(
-            states=self._states, \
-            actions=self._actions, \
-            rewardMatrix=rewardMatrix \
-        )
+        self.qLearner = QLearner(states=states, actions=actions, rewardMatrix=rewardMatrix)
 
     def getCurrentState(self):
         return self._currentState
@@ -28,14 +15,14 @@ class BaseAgent:
     def _setCurrentState(self, newState):
         self._currentState = newState
 
-    def performNextAction(self, ):
+    def performNextAction(self):
         currentState = self.getCurrentState()
         actionToPerform = self.qLearner.chooseAction(currentState)
 
         # Perform Action
-        # --- Do something ---
-        nextState = (0, 1, 0)
-        reward = 0
+        # TODO: Implement this
+        nextState = None
+        reward = rewardMatrix[currentState, nextState]
 
         self._setCurrentState(nextState)
         self.qLearner.updateQ(state, action, reward, nextState)
