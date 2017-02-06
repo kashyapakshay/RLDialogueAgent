@@ -1,9 +1,9 @@
 import itertools
-import nump as np
+import numpy as np
 
-from QLearner import QLearner
+from RLQLearner import QLearner
 
-class BaseAgent:
+class BaseAgent(object):
     def __init__(self, states=[], actions=[], rewardMatrix=[], initialState=None):
         self._currentState = initialState
 
@@ -15,57 +15,52 @@ class BaseAgent:
     def _setCurrentState(self, newState):
         self._currentState = newState
 
-    def performNextAction(self):
+    def getNextAction(self):
         currentState = self.getCurrentState()
         actionToPerform = self.qLearner.chooseAction(currentState)
 
-        # Perform Action
-        # TODO: Implement this
-        nextState = None
-        reward = rewardMatrix[currentState, nextState]
+        return actionToPerform
 
+    def updateState(self, currentState, actionToPerform, nextState):
+        reward = self.qLearner.getReward(currentState, nextState)
         self._setCurrentState(nextState)
-        self.qLearner.updateQ(state, action, reward, nextState)
+        self.qLearner.updateQ(currentState, actionToPerform, reward, nextState)
 
-        return reward, nextState
+    def getRewardMatrix(self):
+        return self.qLearner.getRewardMatrix()
+
+    def getQMatrix(self):
+        return self.qLearner.getQMatrix()
 
 class InstructionGenerationAgent(BaseAgent):
     def __init__(self):
-        self._stateTemplate = ('task-trajectory', 'target-in-view', 'is-near-landmark', 'is-confused', 'prev-instruction-length')
+        self._stateTemplate = ['status']
 
         self.statesMap = {
-            'task-trajectory': ['closer', 'further', 'no-change', 'finished'],
-            'target-in-view': ['yes', 'no'],
-            'is-near-landmark': ['yes', 'no'],
-            'is-confused': ['yes', 'no'],
-            'prev-instruction-length': ['short', 'medium', 'long', 'none']
+            'status': ['done', 'not-done']
         }
 
-        self.actions = ['plain', 'turn', 'plain-landmark', 'turn-landmark']
+        self.actions = ['affirm', 'bye', 'canthear', 'confirm-domain', 'negate', 'repeat',
+            'reqmore', 'welcomemsg', 'canthelp', 'canthelp.missing_slot_value',
+            'canthelp.exception', 'expl-conf', 'impl-conf', 'inform', 'offer', 'request', 'select',
+            'welcomemsg']
 
-        self.initialState = ('no-change', 'no', 'no', 'no', 'none')
-        self.states = self.generateStateSpace(self.statesMap, self.stateTemplate)
+        self.initialState = ('not-done')
+        self.states = self.statesMap['status']
 
         # REWARD MATRIX
         # -10 for every move
         # +100 for finishing
         # +1 for getting closer
-        self.rewardMatrix = np.array([[-10 for state in self._states] for state in self._states])
+        self.rewardMatrix = np.array([[-10 for state in self.states] for state in self.states])
 
-        for state in self.states:
-            for finishState in filter(lambda state: state[0] is 'finished', self.states):
-                self.rewardMatrix[state, finishState] = 100
+        self.rewardMatrix[0, range(len(self.states))] = 100
 
-        for state in self.states:
-            for finishState in filter(lambda state: state[0] is 'closer', self.states):
-                self.rewardMatrix[state, finishState] = 1
+        super(InstructionGenerationAgent, self).__init__(states=self.states, actions=self.actions, rewardMatrix=self.rewardMatrix, initialState=self.initialState)
 
-        BaseAgent.__init__(states=self.states, \
-            actions=self.actions, rewardMatrix=self.rewardMatrix, initialState=self.initialState)
-
-        def generateStateSpace(self, statesMap, stateTemplate):
-            stateValuesList = [statesMap[state] for state in stateTemplate]
-            return itertools.product(*stateValuesList)
+    def generateStateSpace(self, statesMap, stateTemplate):
+        stateValuesList = [statesMap[state] for state in stateTemplate]
+        return [s for s in stateValuesList[0]]
 
 class InterventionAgent(BaseAgent):
     def __init__(self):
@@ -102,3 +97,13 @@ class InterventionAgent(BaseAgent):
     def generateStateSpace(self, statesMap, stateTemplate):
         stateValuesList = [statesMap[state] for state in stateTemplate]
         return itertools.product(*stateValuesList)
+
+if __name__ == '__main__':
+    agent = InstructionGenerationAgent()
+    print agent.getRewardMatrix()
+    print agent.getQMatrix()
+
+    agent.updateState('not-done', 'inform', 'done')
+
+    print agent.getRewardMatrix()
+    print agent.getQMatrix()

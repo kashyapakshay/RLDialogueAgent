@@ -21,22 +21,25 @@ class QLearner:
         # State2 | R21      R22      R23
         # State3 | R31      R32      R33
 
-        if not rewardMatrix:
+        if rewardMatrix.size == 0:
             self._rewardMatrix = np.array([[0 for action in self._actions] for state in self._states])
         else:
             self._rewardMatrix = np.array(rewardMatrix)
 
         # Q-table initialized with same dimensions as Reward Matrix and all 0's.
-        self._qMatrix = np.zero_like(self._rewardMatrix)
+        self._qMatrix = np.zeros((len(self._states), len(self._actions)))
 
-    def getReward(self, state, action):
-        return self._rewardMatrix[self._states.index(state), self._actions.index(action)]
+    def getReward(self, state, nextState):
+        return self._rewardMatrix[self._states.index(state), self._states.index(nextState)]
 
     def setReward(self, state, action, reward):
         self._rewardMatrix[self._states.index(state), self._actions.index(action)] = reward
 
     def getQ(self, state, action):
-        return self._qMatrix[self._states.index(state), self._actions.index(action)]
+        stateIndex = self._states.index(state)
+        actionIndex = self._actions.index(action)
+
+        return self._qMatrix[stateIndex, actionIndex]
 
     def setQ(self, state, action, q):
         self._qMatrix[self._states.index(state), self._actions.index(action)] = q
@@ -50,6 +53,12 @@ class QLearner:
 
         self.setQ(state, action, newQ)
 
+    def getRewardMatrix(self):
+        return self._rewardMatrix
+
+    def getQMatrix(self):
+        return self._qMatrix
+
     def chooseAction(self, state):
         # Explore
         if random.uniform(0, 1) < self._epsilon:
@@ -60,10 +69,10 @@ class QLearner:
             maxActionReward = max(actionRewards)
 
             # We could have more than one action with max reward; choose one randomly.
-            count = actionRewards.count(actionRewards)
+            count = actionRewards.count(maxActionReward)
 
             if count > 1:
-                best = [i for i in range(len(self._actions)) if actionRewards[i] == maxQ]
+                best = [i for i in range(len(self._actions)) if actionRewards[i] == maxActionReward]
                 i = random.choice(best)
             else:
                 i = actionRewards.index(maxActionReward)
